@@ -29,7 +29,7 @@ async function getCameras() {
       camerasSelect.appendChild(option);
     });
   } catch (e) {
-    console.error(e);
+    console.log(e);
   }
 }
 
@@ -38,20 +38,20 @@ async function getMedia(deviceId) {
     audio: true,
     video: { facingMode: "user" },
   };
-  const cameraConstrains = {
+  const cameraConstraints = {
     audio: true,
     video: { deviceId: { exact: deviceId } },
   };
   try {
     myStream = await navigator.mediaDevices.getUserMedia(
-      deviceId ? cameraConstrains : initialConstrains
+      deviceId ? cameraConstraints : initialConstrains
     );
     myFace.srcObject = myStream;
     if (!deviceId) {
       await getCameras();
     }
   } catch (e) {
-    console.error(e);
+    console.log(e);
   }
 }
 
@@ -95,7 +95,8 @@ muteBtn.addEventListener("click", handleMuteClick);
 cameraBtn.addEventListener("click", handleCameraClick);
 camerasSelect.addEventListener("input", handleCameraChange);
 
-// welcome form
+// Welcome Form (join a room)
+
 const welcome = document.getElementById("welcome");
 const welcomeForm = welcome.querySelector("form");
 
@@ -110,33 +111,38 @@ async function handleWelcomeSubmit(event) {
   event.preventDefault();
   const input = welcomeForm.querySelector("input");
   await initCall();
-  socket.emit("join_room", input.value, initCall);
+  socket.emit("join_room", input.value);
   roomName = input.value;
   input.value = "";
 }
 
 welcomeForm.addEventListener("submit", handleWelcomeSubmit);
 
-// socket code
+// Socket Code
 
 socket.on("welcome", async () => {
   const offer = await myPeerConnection.createOffer();
   myPeerConnection.setLocalDescription(offer);
+  console.log("sent the offer");
   socket.emit("offer", offer, roomName);
 });
 
 socket.on("offer", async (offer) => {
+  console.log("received the offer");
   myPeerConnection.setRemoteDescription(offer);
   const answer = await myPeerConnection.createAnswer();
   myPeerConnection.setLocalDescription(answer);
   socket.emit("answer", answer, roomName);
+  console.log("sent the answer");
 });
 
 socket.on("answer", (answer) => {
+  console.log("received the answer");
   myPeerConnection.setRemoteDescription(answer);
 });
 
-socket.emit("ice", (ice) => {
+socket.on("ice", (ice) => {
+  console.log("received candidate");
   myPeerConnection.addIceCandidate(ice);
 });
 
@@ -164,6 +170,7 @@ function makeConnection() {
 }
 
 function handleIce(data) {
+  console.log("sent candidate");
   socket.emit("ice", data.candidate, roomName);
 }
 
